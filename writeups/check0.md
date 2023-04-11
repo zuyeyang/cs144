@@ -9,7 +9,7 @@ I collaborated with: None
 
 I would like to credit/thank these classmates for their help: None
 
-This lab took me about [n] hours to do. I did attend the lab session.
+This lab took me about [3] hours to do. I did attend the lab session.
 
 My secret code from section 2.1 was: 634620
 
