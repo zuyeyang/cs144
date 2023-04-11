@@ -4,74 +4,79 @@
 
 using namespace std;
 
-ByteStream::ByteStream( uint64_t capacity ) : capacity_( capacity ) {}
+ByteStream::ByteStream( uint64_t capacity ) : capacity_( capacity ),
+bytes_pushed_(0),bytes_popped_(0),is_closed_(false),has_error_(false),buffer_() {}
 
 void Writer::push( string data )
 {
-  // Your code here.
-  (void)data;
+    if (!is_closed_ && !has_error_) {
+        uint64_t available = available_capacity();
+        uint64_t to_push = std::min(available, static_cast<uint64_t>(data.size()));
+        for (uint64_t i = 0; i < to_push; i++) {
+            buffer_.push_back(data[i]);
+        }
+        bytes_pushed_ += to_push;
+    }
 }
 
 void Writer::close()
 {
-  // Your code here.
+    is_closed_ = true;
 }
 
 void Writer::set_error()
 {
-  // Your code here.
+    has_error_ = true;
 }
 
 bool Writer::is_closed() const
 {
-  // Your code here.
-  return {};
+    return is_closed_;
 }
 
 uint64_t Writer::available_capacity() const
 {
-  // Your code here.
-  return {};
+    return capacity_ - buffer_.size();
 }
 
 uint64_t Writer::bytes_pushed() const
 {
-  // Your code here.
-  return {};
+    return bytes_pushed_;
 }
 
-string_view Reader::peek() const
+std::string_view Reader::peek() const
 {
-  // Your code here.
-  return {};
+    // string data= std::string(buffer_.begin(), buffer_.end());
+  std::string_view res = std::string_view{&buffer_.front(), 1};
+  return res;
 }
 
 bool Reader::is_finished() const
 {
-  // Your code here.
-  return {};
+    return is_closed_ && buffer_.empty();
 }
 
 bool Reader::has_error() const
 {
-  // Your code here.
-  return {};
+    return has_error_;
 }
 
 void Reader::pop( uint64_t len )
 {
-  // Your code here.
-  (void)len;
+  uint64_t to_pop = std::min(len, static_cast<uint64_t>(buffer_.size()));
+  for (uint64_t i = 0; i < to_pop; i++) {
+      buffer_.pop_front();
+  }
+  bytes_popped_ += to_pop;
 }
 
 uint64_t Reader::bytes_buffered() const
 {
-  // Your code here.
-  return {};
+    return buffer_.size();
 }
 
 uint64_t Reader::bytes_popped() const
 {
-  // Your code here.
-  return {};
+    return bytes_popped_;
 }
+
