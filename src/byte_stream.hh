@@ -17,8 +17,8 @@ protected:
     uint64_t bytes_popped_;
     bool is_closed_;
     bool has_error_;
-    // std::deque<char> buffer_;
-    std::string buffer_;
+    std::deque<std::string> buffer_;
+    // std::string buffer_;
 
     
 

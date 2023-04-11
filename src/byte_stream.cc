@@ -19,8 +19,12 @@ void Writer::push( string data )
         // for (uint64_t i = 0; i < to_push; i++) {
         //     buffer_.push_back(data[i]);
         // }
-        buffer_.append(data, 0, to_push);
-        bytes_pushed_ += to_push;
+        // buffer_.append(data, 0, to_push);
+        if (to_push > 0){
+            buffer_.push_back(data.substr(0, to_push));
+            bytes_pushed_ += to_push;
+        }
+
     }
 }
 
@@ -41,7 +45,9 @@ bool Writer::is_closed() const
 
 uint64_t Writer::available_capacity() const
 {
-    return capacity_ - buffer_.size();
+    // return capacity_ - buffer_.size();
+
+    return capacity_ - bytes_pushed_ + bytes_popped_;
 }
 
 uint64_t Writer::bytes_pushed() const
@@ -51,9 +57,12 @@ uint64_t Writer::bytes_pushed() const
 
 std::string_view Reader::peek() const
 {
-    // string data= std::string(buffer_.begin(), buffer_.end());
   // std::string_view res = std::string_view{&buffer_.front(), 1};
-  std::string_view res = std::string_view{&buffer_[0], buffer_.size()};
+
+  // std::string_view res = std::string_view{&buffer_[0], buffer_.size()};
+
+  std::string_view res = std::string_view{&buffer_.front()[0], buffer_.front().size()};
+
   return res;
 }
 
@@ -69,17 +78,31 @@ bool Reader::has_error() const
 
 void Reader::pop( uint64_t len )
 {
-  uint64_t to_pop = std::min(len, static_cast<uint64_t>(buffer_.size()));
+  // uint64_t to_pop = std::min(len, static_cast<uint64_t>(buffer_.size()));
   // for (uint64_t i = 0; i < to_pop; i++) {
   //     buffer_.pop_front();
   // }
-  buffer_.erase(0, to_pop);
-  bytes_popped_ += to_pop;
+
+  // buffer_.erase(0, to_pop);
+
+  while (len > 0 && !buffer_.empty()){
+    uint64_t string_size = static_cast<uint64_t>(buffer_.front().size());
+    uint64_t to_pop = std::min(len, string_size);
+    if (to_pop < string_size){
+        buffer_.front().erase(0, to_pop);
+    } else {
+        buffer_.pop_front();
+    }
+
+    len -= to_pop;
+    bytes_popped_ += to_pop;
+  }
 }
 
 uint64_t Reader::bytes_buffered() const
 {
-    return buffer_.size();
+
+    return bytes_pushed_ - bytes_popped_;
 }
 
 uint64_t Reader::bytes_popped() const
