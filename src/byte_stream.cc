@@ -8,70 +8,85 @@ ByteStream::ByteStream( uint64_t capacity ) : capacity_( capacity ) {}
 
 void Writer::push( string data )
 {
-  // Your code here.
-  (void)data;
+  if ( !is_closed_ && !has_error_ ) { /* make sure it's not closed or in error*/
+    const uint64_t available = available_capacity();
+    const uint64_t to_push = std::min( available, static_cast<uint64_t>( data.size() ) );
+    if ( to_push > 0 ) { /* only push the dataset for a positive to_push size*/
+                         /* only push the data string with upper bounds to_push sizes*/
+      buffer_.push_back( data.substr( 0, to_push ) );
+      bytes_pushed_ += to_push;
+    }
+  }
 }
 
 void Writer::close()
 {
-  // Your code here.
+  is_closed_ = true;
 }
 
 void Writer::set_error()
 {
-  // Your code here.
+  has_error_ = true;
 }
 
 bool Writer::is_closed() const
 {
-  // Your code here.
-  return {};
+  return is_closed_;
 }
 
 uint64_t Writer::available_capacity() const
 {
-  // Your code here.
-  return {};
+  return capacity_ - bytes_pushed_ + bytes_popped_;
 }
 
 uint64_t Writer::bytes_pushed() const
 {
-  // Your code here.
-  return {};
+  return bytes_pushed_;
 }
 
-string_view Reader::peek() const
+std::string_view Reader::peek() const
 {
-  // Your code here.
-  return {};
+  /* take a peek at the first string element of our buffer*/
+  const std::string_view res = std::string_view { buffer_.front().data(), buffer_.front().size() };
+  return res;
 }
 
 bool Reader::is_finished() const
 {
-  // Your code here.
-  return {};
+  return is_closed_ && buffer_.empty();
 }
 
 bool Reader::has_error() const
 {
-  // Your code here.
-  return {};
+  return has_error_;
 }
 
 void Reader::pop( uint64_t len )
 {
-  // Your code here.
-  (void)len;
+  while ( len > 0 && !buffer_.empty() ) {
+    const auto string_size = static_cast<uint64_t>( buffer_.front().size() );
+    const uint64_t to_pop = std::min( len, string_size );
+    /* if the to_pop size is greater than an element string, pop the whole string
+    otherwise, erasing the corrsponding amount of bytes from the string and keep
+    the element*/
+    if ( to_pop < string_size ) {
+      buffer_.front().erase( 0, to_pop );
+    } else {
+      buffer_.pop_front();
+    }
+
+    len -= to_pop;
+    bytes_popped_ += to_pop;
+  }
 }
 
 uint64_t Reader::bytes_buffered() const
 {
-  // Your code here.
-  return {};
+
+  return bytes_pushed_ - bytes_popped_;
 }
 
 uint64_t Reader::bytes_popped() const
 {
-  // Your code here.
-  return {};
+  return bytes_popped_;
 }
