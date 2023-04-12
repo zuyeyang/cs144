@@ -4,94 +4,82 @@
 
 using namespace std;
 
-ByteStream::ByteStream( uint64_t capacity ) : capacity_( capacity ),
-                                              bytes_pushed_(0),
-                                              bytes_popped_(0),
-                                              is_closed_(false),
-                                              has_error_(false),
-                                              buffer_() {}
+ByteStream::ByteStream( uint64_t capacity )
+  : capacity_( capacity )
+  , bytes_pushed_( 0 )
+  , bytes_popped_( 0 )
+  , is_closed_( false )
+  , has_error_( false )
+  , buffer_()
+{}
 
 void Writer::push( string data )
 {
-    if (!is_closed_ && !has_error_) {
-        uint64_t available = available_capacity();
-        uint64_t to_push = std::min(available, static_cast<uint64_t>(data.size()));
-        // for (uint64_t i = 0; i < to_push; i++) {
-        //     buffer_.push_back(data[i]);
-        // }
-        // buffer_.append(data, 0, to_push);
-        if (to_push > 0){
-            buffer_.push_back(data.substr(0, to_push));
-            bytes_pushed_ += to_push;
-        }
-
+  if ( !is_closed_ && !has_error_ ) { /* make sure it's not closed or in error*/
+    uint64_t available = available_capacity();
+    uint64_t to_push = std::min( available, static_cast<uint64_t>( data.size() ) );
+    if ( to_push > 0 ) { /* only push the dataset for a positive to_push size*/
+                         /* only push the data string with upper bounds to_push sizes*/
+      buffer_.push_back( data.substr( 0, to_push ) );
+      bytes_pushed_ += to_push;
     }
+  }
 }
 
 void Writer::close()
 {
-    is_closed_ = true;
+  is_closed_ = true;
 }
 
 void Writer::set_error()
 {
-    has_error_ = true;
+  has_error_ = true;
 }
 
 bool Writer::is_closed() const
 {
-    return is_closed_;
+  return is_closed_;
 }
 
 uint64_t Writer::available_capacity() const
 {
-    // return capacity_ - buffer_.size();
-
-    return capacity_ - bytes_pushed_ + bytes_popped_;
+  return capacity_ - bytes_pushed_ + bytes_popped_;
 }
 
 uint64_t Writer::bytes_pushed() const
 {
-    return bytes_pushed_;
+  return bytes_pushed_;
 }
 
 std::string_view Reader::peek() const
 {
-  // std::string_view res = std::string_view{&buffer_.front(), 1};
-
-  // std::string_view res = std::string_view{&buffer_[0], buffer_.size()};
-
-  std::string_view res = std::string_view{&buffer_.front()[0], buffer_.front().size()};
-
+  /* take a peek at the first string element of our buffer*/
+  std::string_view res = std::string_view { &buffer_.front()[0], buffer_.front().size() };
   return res;
 }
 
 bool Reader::is_finished() const
 {
-    return is_closed_ && buffer_.empty();
+  return is_closed_ && buffer_.empty();
 }
 
 bool Reader::has_error() const
 {
-    return has_error_;
+  return has_error_;
 }
 
 void Reader::pop( uint64_t len )
 {
-  // uint64_t to_pop = std::min(len, static_cast<uint64_t>(buffer_.size()));
-  // for (uint64_t i = 0; i < to_pop; i++) {
-  //     buffer_.pop_front();
-  // }
-
-  // buffer_.erase(0, to_pop);
-
-  while (len > 0 && !buffer_.empty()){
-    uint64_t string_size = static_cast<uint64_t>(buffer_.front().size());
-    uint64_t to_pop = std::min(len, string_size);
-    if (to_pop < string_size){
-        buffer_.front().erase(0, to_pop);
+  while ( len > 0 && !buffer_.empty() ) {
+    uint64_t string_size = static_cast<uint64_t>( buffer_.front().size() );
+    uint64_t to_pop = std::min( len, string_size );
+    /* if the to_pop size is greater than an element string, pop the whole string
+    otherwise, erasing the corrsponding amount of bytes from the string and keep
+    the element*/
+    if ( to_pop < string_size ) {
+      buffer_.front().erase( 0, to_pop );
     } else {
-        buffer_.pop_front();
+      buffer_.pop_front();
     }
 
     len -= to_pop;
@@ -102,11 +90,10 @@ void Reader::pop( uint64_t len )
 uint64_t Reader::bytes_buffered() const
 {
 
-    return bytes_pushed_ - bytes_popped_;
+  return bytes_pushed_ - bytes_popped_;
 }
 
 uint64_t Reader::bytes_popped() const
 {
-    return bytes_popped_;
+  return bytes_popped_;
 }
-
