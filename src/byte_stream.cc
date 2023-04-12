@@ -12,8 +12,9 @@ void Writer::push( string data )
     const uint64_t available = available_capacity();
     const uint64_t to_push = std::min( available, static_cast<uint64_t>( data.size() ) );
     if ( to_push > 0 ) { /* only push the dataset for a positive to_push size*/
-                         /* only push the data string with upper bounds to_push sizes*/
-      buffer_.push_back( data.substr( 0, to_push ) );
+      /* only push the data string with upper bounds to_push sizes*/
+      string tmp_data = data.substr( 0, to_push );
+      buffer_.push_back( std::move( tmp_data ) );
       bytes_pushed_ += to_push;
     }
   }
