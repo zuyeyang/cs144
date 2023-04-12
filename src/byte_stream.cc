@@ -4,20 +4,13 @@
 
 using namespace std;
 
-ByteStream::ByteStream( uint64_t capacity )
-  : capacity_( capacity )
-  , bytes_pushed_( 0 )
-  , bytes_popped_( 0 )
-  , is_closed_( false )
-  , has_error_( false )
-  , buffer_()
-{}
+ByteStream::ByteStream( uint64_t capacity ) : capacity_( capacity ) {}
 
 void Writer::push( string data )
 {
   if ( !is_closed_ && !has_error_ ) { /* make sure it's not closed or in error*/
-    uint64_t available = available_capacity();
-    uint64_t to_push = std::min( available, static_cast<uint64_t>( data.size() ) );
+    const uint64_t available = available_capacity();
+    const uint64_t to_push = std::min( available, static_cast<uint64_t>( data.size() ) );
     if ( to_push > 0 ) { /* only push the dataset for a positive to_push size*/
                          /* only push the data string with upper bounds to_push sizes*/
       buffer_.push_back( data.substr( 0, to_push ) );
@@ -54,7 +47,7 @@ uint64_t Writer::bytes_pushed() const
 std::string_view Reader::peek() const
 {
   /* take a peek at the first string element of our buffer*/
-  std::string_view res = std::string_view { &buffer_.front()[0], buffer_.front().size() };
+  const std::string_view res = std::string_view { buffer_.front().data(), buffer_.front().size() };
   return res;
 }
 
@@ -71,8 +64,8 @@ bool Reader::has_error() const
 void Reader::pop( uint64_t len )
 {
   while ( len > 0 && !buffer_.empty() ) {
-    uint64_t string_size = static_cast<uint64_t>( buffer_.front().size() );
-    uint64_t to_pop = std::min( len, string_size );
+    const auto string_size = static_cast<uint64_t>( buffer_.front().size() );
+    const uint64_t to_pop = std::min( len, string_size );
     /* if the to_pop size is greater than an element string, pop the whole string
     otherwise, erasing the corrsponding amount of bytes from the string and keep
     the element*/
