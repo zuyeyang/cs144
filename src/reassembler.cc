@@ -21,7 +21,6 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
   }
 
   /* Update the three boundary index*/
-  first_unpopped_index_ = output.bytes_pushed();
   first_unassembled_index_ = first_unpopped_index_ + bytes_pending();
   first_unacceptable_index_ = first_unpopped_index_ + capacity_;
 
@@ -39,11 +38,11 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
     first_index = first_unpopped_index_;
   }
   /* If overlap happens, merge with existing buffer element*/
-  auto it = pending_bytes_.lower_bound( first_index );
+  auto it = buffer_.lower_bound( first_index );
   std::string left;
   std::string right;
   /*Merge with previous data if overlapping or adjacent*/
-  if ( it != pending_bytes_.begin() ) {
+  if ( it != buffer_.begin() ) {
     auto prev_it = std::prev( it );
     uint64_t prev_it_end_idx = prev_it->first + prev_it->second.size();
     if ( prev_it_end_idx >= first_index ) {
@@ -56,29 +55,29 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
       }
       /* Merge by updating new data index*/
       first_index = prev_it->first;
-      it = pending_bytes_.erase( prev_it );
+      it = buffer_.erase( prev_it );
     }
   }
 
   /* Merge all available element with next data if overlapping or adjacent */
-  while ( it != pending_bytes_.end() && first_index + data.size() >= it->first ) {
+  while ( it != buffer_.end() && first_index + data.size() >= it->first ) {
     if ( it->first + it->second.size() > first_index + data.size() ) {
       data = data.substr( 0, it->first - first_index ) + it->second;
     }
-    it = pending_bytes_.erase( it );
+    it = buffer_.erase( it );
   }
   /* Assign the data*/
-  pending_bytes_[first_index] = data;
+  buffer_[first_index] = data;
 
   /*Write the continuous bytes in the pending bytes to the output*/
-  auto it_push = pending_bytes_.begin();
-  while ( it_push != pending_bytes_.end() && it_push->first == next_expected_byte_ ) {
+  auto it_push = buffer_.begin();
+  while ( it_push != buffer_.end() && it_push->first == first_unpopped_index_ ) {
     output.push( it_push->second );
-    next_expected_byte_ += it_push->second.size();
-    it_push = pending_bytes_.erase( it_push );
+    first_unpopped_index_ += it_push->second.size();
+    it_push = buffer_.erase( it_push );
   }
   /* close the bytestream if finish all the push including eof*/
-  if ( next_expected_byte_ == closing_bytes_ && is_end_received_ && pending_bytes_.empty() ) {
+  if ( first_unpopped_index_ == closing_bytes_ && is_end_received_ && buffer_.empty() ) {
     output.close();
   }
 }
@@ -86,7 +85,7 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
 uint64_t Reassembler::bytes_pending() const
 {
   uint64_t total_bytes = 0;
-  for ( const auto& entry : pending_bytes_ ) {
+  for ( const auto& entry : buffer_ ) {
     total_bytes += entry.second.size();
   }
   return total_bytes;

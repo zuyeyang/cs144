@@ -9,15 +9,13 @@ class Reassembler
 {
 private:
   // /*Helper Function*/
-  std::map<uint64_t, std::string> pending_bytes_ {};
-  uint64_t next_expected_byte_ = 0;
-  bool is_end_received_ = false;
-  uint64_t available_capacity_ = 0;
-  uint64_t first_unacceptable_index_ = 0;
-  uint64_t first_unassembled_index_ = 0;
-  uint64_t first_unpopped_index_ = 0;
-  uint64_t capacity_ = 0;
-  uint64_t closing_bytes_ = 0;
+  std::map<uint64_t, std::string> buffer_ {}; /* buffer for reassembler*/
+  uint64_t first_unacceptable_index_ = 0;     /* upper bound of the buffer idx*/
+  uint64_t first_unassembled_index_ = 0;      /* end of buffered bytes*/
+  uint64_t first_unpopped_index_ = 0;         /* next index to be popped*/
+  uint64_t capacity_ = 0;                     /* size of buffer*/
+  uint64_t closing_bytes_ = 0;                /* the end of the eof file*/
+  bool is_end_received_ = false;              /* If end of file is received*/
 
 public:
   /*
