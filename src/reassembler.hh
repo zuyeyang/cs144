@@ -8,7 +8,7 @@
 class Reassembler
 {
 private:
-  // /*Helper Function*/
+  /*Helper Function*/
   std::map<uint64_t, std::string> buffer_ {}; /* buffer for reassembler*/
   uint64_t first_unacceptable_index_ = 0;     /* upper bound of the buffer idx*/
   uint64_t first_unassembled_index_ = 0;      /* end of buffered bytes*/

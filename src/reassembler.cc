@@ -40,11 +40,10 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
   /* If overlap happens, merge with existing buffer element*/
   auto it = buffer_.lower_bound( first_index );
   std::string left;
-  std::string right;
   /*Merge with previous data if overlapping or adjacent*/
   if ( it != buffer_.begin() ) {
     auto prev_it = std::prev( it );
-    uint64_t prev_it_end_idx = prev_it->first + prev_it->second.size();
+    const uint64_t prev_it_end_idx = prev_it->first + prev_it->second.size();
     if ( prev_it_end_idx >= first_index ) {
       if ( prev_it_end_idx >= first_index + data.size() ) { /*prev_it includes new data*/
         data = prev_it->second;
