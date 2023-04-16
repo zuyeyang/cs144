@@ -9,7 +9,6 @@ class Reassembler
 {
 private:
   // /*Helper Function*/
-  // std::map<uint64_t, char> pending_bytes_ {};
   std::map<uint64_t, std::string> pending_bytes_ {};
   uint64_t next_expected_byte_ = 0;
   bool is_end_received_ = false;
