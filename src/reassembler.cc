@@ -21,11 +21,11 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
   }
 
   /* Update the three boundary index*/
-  first_unassembled_index_ = first_unpopped_index_ + bytes_pending();
-  first_unacceptable_index_ = first_unpopped_index_ + capacity_;
+  first_unassembled_index_ = bytes_pushed + bytes_pending();
+  first_unacceptable_index_ = bytes_pushed + capacity_;
 
   /* If the input is out of boundary or it's already pushed, return*/
-  if ( first_index >= first_unacceptable_index_ || first_index + data.size() < first_unpopped_index_ ) {
+  if ( first_index >= first_unacceptable_index_ || first_index + data.size() < bytes_pushed ) {
     return;
   }
 
@@ -33,9 +33,9 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
   if ( first_index + data.size() > first_unacceptable_index_ ) {
     data.resize( first_unacceptable_index_ - first_index );
   }
-  if ( first_index < first_unpopped_index_ ) {
-    data = data.substr( first_unpopped_index_ - first_index );
-    first_index = first_unpopped_index_;
+  if ( first_index < bytes_pushed ) {
+    data = data.substr( bytes_pushed - first_index );
+    first_index = bytes_pushed;
   }
   /* If overlap happens, merge with existing buffer element*/
   auto it = buffer_.lower_bound( first_index );
@@ -70,13 +70,13 @@ void Reassembler::insert( uint64_t first_index, std::string data, bool is_last_s
 
   /*Write the continuous bytes in the pending bytes to the output*/
   auto it_push = buffer_.begin();
-  while ( it_push != buffer_.end() && it_push->first == first_unpopped_index_ ) {
+  while ( it_push != buffer_.end() && it_push->first == bytes_pushed ) {
     output.push( it_push->second );
-    first_unpopped_index_ += it_push->second.size();
+    bytes_pushed += it_push->second.size();
     it_push = buffer_.erase( it_push );
   }
   /* close the bytestream if finish all the push including eof*/
-  if ( first_unpopped_index_ == closing_bytes_ && is_end_received_ && buffer_.empty() ) {
+  if ( bytes_pushed == closing_bytes_ && is_end_received_ && buffer_.empty() ) {
     output.close();
   }
 }
