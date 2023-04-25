@@ -1,31 +1,38 @@
 #include "tcp_receiver.hh"
+#include "wrapping_integers.hh"
 #include <cstdint>
 
 using namespace std;
 
 void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, Writer& inbound_stream )
 {
-  if ( !zero_point.has_value() ) {
-    if ( message.SYN ) {
-      zero_point = message.seqno;
-      reassembler.insert( 0, message.payload, message.FIN, inbound_stream );
-      ackno = Wrap32::wrap( message.sequence_length(), zero_point.value() );
-      window_size = inbound_stream.available_capacity() - reassembler.bytes_pending();
-    }
+  if ( message.SYN && this->zero_point.has_value() ) {
     return;
   }
-
-  uint64_t first_index = message.seqno.unwrap( zero_point.value(), reassembler.bytes_pending() );
-  reassembler.insert( first_index, message.payload, message.FIN, inbound_stream );
-  ackno = ackno.value() + message.sequence_length();
-  window_size = inbound_stream.available_capacity() - reassembler.bytes_pending();
+  if ( message.SYN ) {
+    this->zero_point = message.seqno;
+    reassembler.insert( 0, message.payload, message.FIN, inbound_stream );
+    return;
+  }
+  uint64_t absolute_seqno = 0;
+  if ( this->zero_point.has_value() ) {
+    absolute_seqno = message.seqno.unwrap( this->zero_point.value(), inbound_stream.bytes_pushed() );
+    reassembler.insert( absolute_seqno - 1, message.payload, message.FIN, inbound_stream );
+  }
 }
 
 TCPReceiverMessage TCPReceiver::send( const Writer& inbound_stream ) const
 {
-  // Your code here.
-  struct TCPReceiverMessage res;
-  res.ackno = ackno;
-  res.window_size = inbound_stream.available_capacity();
+  TCPReceiverMessage res;
+  if ( inbound_stream.available_capacity() >= UINT16_MAX ) {
+    res.window_size = UINT16_MAX;
+  } else {
+    res.window_size = uint16_t( inbound_stream.available_capacity() );
+  }
+
+  if ( this->zero_point.has_value() ) {
+    res.ackno
+      = Wrap32::wrap( inbound_stream.bytes_pushed() + inbound_stream.is_closed() + 1, this->zero_point.value() );
+  }
   return res;
 }

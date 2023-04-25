@@ -8,8 +8,6 @@ class TCPReceiver
 {
 private:
   std::optional<Wrap32> zero_point {};
-  std::optional<Wrap32> ackno {};
-  uint16_t window_size {};
 
 public:
   /*
