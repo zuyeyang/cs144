@@ -2,10 +2,21 @@
 
 #include "byte_stream.hh"
 
+#include <cstdint>
+#include <map>
 #include <string>
-
 class Reassembler
 {
+private:
+  /*Helper Function*/
+  std::map<uint64_t, std::string> buffer_ {}; /* buffer for reassembler*/
+  uint64_t first_unacceptable_index_ { 0 };   /* upper bound of the buffer idx*/
+  uint64_t first_unassembled_index_ { 0 };    /* end of buffered bytes*/
+  uint64_t bytes_pushed { 0 };                /* next index to be popped*/
+  uint64_t capacity_ { 0 };                   /* size of buffer*/
+  uint64_t closing_bytes_ { 0 };              /* the end of the eof file*/
+  bool is_end_received_ { false };            /* If end of file is received*/
+
 public:
   /*
    * Insert a new substring to be reassembled into a ByteStream.
