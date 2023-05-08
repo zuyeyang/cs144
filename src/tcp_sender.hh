@@ -48,13 +48,10 @@ public:
       } else {                                       /* update curr_RTO_*/
         curr_RTO_ += ms_since_last_tick;
       }
-      /* !!!!!!!!!!! */
-      /* check if needed! */
       if ( curr_RTO_ >= RTO_ && open_ ) {
         curr_RTO_ = 0;
         return true;
       }
-      /* !!!!!!!!!!! */
     }
     return false;
   }
@@ -69,7 +66,7 @@ private:
   uint64_t initial_RTO_ms_;
 
   /* storage of TCPSenderMessage*/
-  std::queue<TCPSenderMessage> mutable segment_buffer_ {}; /* TCPSender is going to send*/
+  std::deque<TCPSenderMessage> mutable segment_buffer_ {}; /* TCPSender is going to send*/
 
   /* State check*/
   bool SYN_SENT_ { false };

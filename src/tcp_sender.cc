@@ -34,7 +34,7 @@ optional<TCPSenderMessage> TCPSender::maybe_send()
   // Your code here.
   if ( !segment_buffer_.empty() ) {
     const TCPSenderMessage res = segment_buffer_.front();
-    segment_buffer_.pop();
+    segment_buffer_.pop_front();
     return res;
   }
   return {};
@@ -52,7 +52,7 @@ void TCPSender::push( Reader& outbound_stream )
     send_none_empty_message( msg );
     return;
   }
-  /* ????? */
+
   if ( next_sequno_ == sequence_numbers_in_flight() ) {
     return;
   }
@@ -61,7 +61,7 @@ void TCPSender::push( Reader& outbound_stream )
   /* if window_size_ == 0, then we treat it as 1*/
   uint64_t effective_w_size = window_size_ == 0 ? 1 : window_size_;
   uint64_t reminders = effective_w_size - ( next_sequno_ - ackno_ );
-  while ( reminders ) {
+  while ( reminders > 0 ) {
     TCPSenderMessage new_msg;
     if ( outbound_stream.is_finished() && !FIN_SENT_ ) {
       /* send a finish msg*/
@@ -86,6 +86,7 @@ void TCPSender::push( Reader& outbound_stream )
       return;
     }
     send_none_empty_message( new_msg );
+    reminders = effective_w_size - ( next_sequno_ - ackno_ );
   }
 }
 
@@ -94,14 +95,16 @@ TCPSenderMessage TCPSender::send_empty_message() const
   // Your code here.
   TCPSenderMessage msg;
   msg.seqno = Wrap32::wrap( next_sequno_, isn_ );
-  segment_buffer_.push( msg );
   return msg;
 }
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
 {
   // Your code here.
-  uint64_t abs_ackno = msg.ackno->unwrap( isn_, next_sequno_ );
+  if ( !msg.ackno.has_value() ) {
+    return;
+  }
+  uint64_t abs_ackno = msg.ackno.value().unwrap( isn_, next_sequno_ );
   if ( abs_ackno - next_sequno_ > 0 ) {
     return;
   }
@@ -124,15 +127,16 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   /* update the outstanding queue*/
   while ( !segment_outstanding_.empty() ) {
     const auto& sender_msg = segment_outstanding_.front();
-    if ( ackno_ - sender_msg.seqno.unwrap( isn_, ackno_ ) > sender_msg.sequence_length() ) {
+    if ( ( ackno_ - sender_msg.seqno.unwrap( isn_, ackno_ ) ) >= sender_msg.sequence_length() ) {
       sequence_numbers_in_flight_ -= sender_msg.sequence_length();
       segment_outstanding_.pop();
     } else {
       break;
     }
   }
-
-  if ( !segment_outstanding_.empty() ) {
+  if ( segment_outstanding_.empty() ) {
+    timer_.close();
+  } else {
     timer_.start();
   }
 }
@@ -144,16 +148,13 @@ void TCPSender::tick( uint64_t ms_since_last_tick )
   }
 
   if ( !segment_outstanding_.empty() ) {
-    segment_buffer_.push( segment_outstanding_.front() );
-    if ( window_size_ != 0 ) {
+    segment_buffer_.push_front( segment_outstanding_.front() );
+    if ( window_size_ > 0 || ( window_size_ == 0 && !SYN_ACKED_ ) ) {
       consecutive_retransmission_++;
       timer_.doubleRTO();
     }
     if ( !timer_.isOpen() ) {
       timer_.start();
-    }
-    if ( SYN_SENT_ && ( next_sequno_ == sequence_numbers_in_flight_ ) && ( timer_.RTO() < 4000 ) ) {
-      timer_.setRTO( 4000 );
     }
   } else {
     /* empty segment outstanding */
@@ -168,6 +169,10 @@ void TCPSender::send_none_empty_message( TCPSenderMessage& msg )
   next_sequno_ += msg.sequence_length();
   sequence_numbers_in_flight_ += msg.sequence_length();
 
-  segment_buffer_.push( msg );
+  segment_buffer_.push_back( msg );
   segment_outstanding_.push( msg );
+
+  if ( !timer_.isOpen() ) {
+    timer_.start();
+  }
 };
