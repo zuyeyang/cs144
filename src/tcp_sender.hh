@@ -10,7 +10,7 @@
 class TCPTimer
 {
 private:
-  unsigned int initial_RTO_; /* Init RTO*/
+  unsigned int base_RTO_;    /* Init RTO*/
   unsigned int RTO_;         /* Track the upper bounds of RTO*/
   unsigned int curr_RTO_ {}; /* current RTO*/
   bool open_ {};
@@ -18,16 +18,15 @@ private:
 public:
   //! Initialize a TCP retransmission timer
   explicit TCPTimer( const uint64_t initial_RTO_ms )
-    : initial_RTO_( initial_RTO_ms ), RTO_( initial_RTO_ ), open_( true )
+    : base_RTO_( initial_RTO_ms ), RTO_( initial_RTO_ms ), open_( true )
   {}
 
-  bool isOpen() { return open_; }
+  bool isOpen() const { return open_; }
   unsigned int RTO() const { return RTO_; }
   void doubleRTO() { RTO_ *= 2; }
-  void setRTO( unsigned int val ) { RTO_ = val; }
   void resetRTO()
   {
-    RTO_ = initial_RTO_;
+    RTO_ = base_RTO_;
     curr_RTO_ = 0;
   }
   void start()
@@ -56,11 +55,9 @@ public:
     return false;
   }
 };
+
 class TCPSender
 {
-  /*!!!!!!!!!!!!!!!!!!*/
-  /* REMOVE REPETITIVE ATTRIBUTES!!!!!!!!!!!!!!!!!!*/
-  /*!!!!!!!!!!!!!!!!!!*/
 private:
   Wrap32 isn_;
   uint64_t initial_RTO_ms_;
@@ -84,11 +81,6 @@ private:
   TCPTimer timer_;
   size_t consecutive_retransmission_ { 0 };
   std::queue<TCPSenderMessage> segment_outstanding_ {}; /*TCPSender may resend*/
-
-  /*Helper Function*/
-  uint64_t next_seqno_absolute() const { return next_sequno_; };
-  Wrap32 next_seqno() const { return Wrap32::wrap( next_sequno_, isn_ ); };
-  // void send_none_empty_message( TCPSenderMessage& msg );
 
 public:
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */

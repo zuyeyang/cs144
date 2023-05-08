@@ -45,7 +45,7 @@ void TCPSender::push( Reader& outbound_stream )
   if ( outbound_stream.has_error() || FIN_SENT_ ) {
     return;
   }
-  uint64_t effective_w_size = window_size_ == 0 ? 1 : window_size_;
+  const uint64_t effective_w_size = window_size_ == 0 ? 1 : window_size_;
   while ( sequence_numbers_in_flight() < effective_w_size ) {
     TCPSenderMessage msg = TCPSenderMessage();
     if ( !SYN_SENT_ ) {
@@ -53,7 +53,7 @@ void TCPSender::push( Reader& outbound_stream )
       msg.seqno = isn_;
       SYN_SENT_ = true;
     }
-    uint64_t len
+    const uint64_t len
       = min( effective_w_size - sequence_numbers_in_flight() - msg.sequence_length(), TCPConfig::MAX_PAYLOAD_SIZE );
     msg.seqno = Wrap32::wrap( next_sequno_, isn_ );
     read( outbound_stream, len, msg.payload );
@@ -98,9 +98,9 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   if ( !SYN_SENT_ || !msg.ackno.has_value() ) {
     return;
   }
-  uint64_t abs_ackno = msg.ackno.value().unwrap( isn_, abs_ackno_ );
-  if ( abs_ackno > abs_ackno_ && abs_ackno <= next_sequno_ ) {
-    abs_ackno_ = abs_ackno;
+  const uint64_t msg_abs_ackno = msg.ackno.value().unwrap( isn_, abs_ackno_ );
+  if ( msg_abs_ackno > abs_ackno_ && msg_abs_ackno <= next_sequno_ ) {
+    abs_ackno_ = msg_abs_ackno;
   } else {
     return;
   }
@@ -108,7 +108,7 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   if ( !SYN_ACKED_ && SYN_SENT_ && abs_ackno_ > 0 ) {
     SYN_ACKED_ = true;
   }
-  if ( !FIN_ACKED_ && FIN_SENT_ && abs_ackno == next_sequno_ ) {
+  if ( !FIN_ACKED_ && FIN_SENT_ && msg_abs_ackno == next_sequno_ ) {
     FIN_ACKED_ = true;
   }
 
