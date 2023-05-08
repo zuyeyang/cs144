@@ -20,7 +20,7 @@ TCPSender::TCPSender( uint64_t initial_RTO_ms, optional<Wrap32> fixed_isn )
 uint64_t TCPSender::sequence_numbers_in_flight() const
 {
   // Your code here.
-  return this->sequence_numbers_in_flight_;
+  return next_sequno_ - abs_ackno_;
 }
 
 uint64_t TCPSender::consecutive_retransmissions() const
@@ -42,51 +42,38 @@ optional<TCPSenderMessage> TCPSender::maybe_send()
 void TCPSender::push( Reader& outbound_stream )
 {
   // Your code here.
-  if ( outbound_stream.has_error() ) {
+  if ( outbound_stream.has_error() || FIN_SENT_ ) {
     return;
   }
-  TCPSenderMessage msg;
-  if ( next_sequno_ == 0 ) {
-    msg.SYN = true;
-    SYN_SENT_ = true;
-    send_none_empty_message( msg );
-    return;
-  }
-
-  if ( next_sequno_ == sequence_numbers_in_flight() ) {
-    return;
-  }
-
-  /* send all string data*/
-  /* if window_size_ == 0, then we treat it as 1*/
   uint64_t effective_w_size = window_size_ == 0 ? 1 : window_size_;
-  uint64_t reminders = effective_w_size - ( next_sequno_ - ackno_ );
-  while ( reminders > 0 ) {
-    TCPSenderMessage new_msg;
-    if ( outbound_stream.is_finished() && !FIN_SENT_ ) {
-      /* send a finish msg*/
-      new_msg.FIN = true;
-      FIN_SENT_ = true;
-      send_none_empty_message( new_msg );
-      return;
+  while ( sequence_numbers_in_flight() < effective_w_size ) {
+    TCPSenderMessage msg = TCPSenderMessage();
+    if ( !SYN_SENT_ ) {
+      msg.SYN = true;
+      msg.seqno = isn_;
+      SYN_SENT_ = true;
     }
-    if ( outbound_stream.is_finished() ) {
-      /* we have sent the FIN msg*/
-      return;
+    uint64_t len
+      = min( effective_w_size - sequence_numbers_in_flight() - msg.sequence_length(), TCPConfig::MAX_PAYLOAD_SIZE );
+    msg.seqno = Wrap32::wrap( next_sequno_, isn_ );
+    read( outbound_stream, len, msg.payload );
+    if ( !FIN_SENT_ && outbound_stream.is_finished() ) {
+      if ( sequence_numbers_in_flight() + msg.sequence_length() < effective_w_size ) {
+        msg.FIN = true;
+        FIN_SENT_ = true;
+      }
     }
-    /* load the data into the msg*/
-    size_t size = std::min( reminders, TCPConfig::MAX_PAYLOAD_SIZE );
-    read( outbound_stream, size, new_msg.payload );
-    if ( new_msg.sequence_length() < effective_w_size && outbound_stream.is_finished() ) {
-      /* this is a finish data msg*/
-      new_msg.FIN = true;
-      FIN_SENT_ = true;
+    if ( msg.sequence_length() > 0 ) {
+      segment_buffer_.push_back( msg );
+      segment_outstanding_.push( msg );
+      next_sequno_ += msg.sequence_length();
+
+      if ( !timer_.isOpen() ) {
+        timer_.start();
+      }
+    } else {
+      break;
     }
-    if ( new_msg.sequence_length() == 0 ) {
-      return;
-    }
-    send_none_empty_message( new_msg );
-    reminders = effective_w_size - ( next_sequno_ - ackno_ );
   }
 }
 
@@ -100,15 +87,39 @@ TCPSenderMessage TCPSender::send_empty_message() const
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
 {
+  // if ( !msg.ackno.has_value() || !SYN_SENT_ ) {
+  //   return;
+  // }
+  // /* treat window as 1 but do not back off RTO*/
+  // if ( msg.window_size == 0 ) {
+  //   window_size_ = 1;
+  //   zero_window_ = true;
+  // } else {
+  //   window_size_ = msg.window_size;
+  //   zero_window_ = false;
+  // }
+  // uint64_t abs_ackno = msg.ackno.value().unwrap( isn_, abs_ackno_ );
+  // if ( abs_ackno > abs_ackno_ && abs_ackno <= next_sequno_ ) {
+  //   abs_ackno_ = abs_ackno;
+  // } else {
+  //   return;
+  // }
+  // if ( !SYN_ACKED_ && SYN_SENT_ && abs_ackno_ > 0 ) {
+  //   SYN_ACKED_ = true;
+  // }
+  // if ( !FIN_ACKED_ && FIN_SENT_ && abs_ackno == next_sequno_ ) {
+  //   FIN_ACKED_ = true;
+  // }
+
   // Your code here.
-  if ( !msg.ackno.has_value() ) {
+  if ( !msg.ackno.has_value() || !SYN_SENT_ ) {
     return;
   }
   uint64_t abs_ackno = msg.ackno.value().unwrap( isn_, next_sequno_ );
   if ( abs_ackno - next_sequno_ > 0 ) {
     return;
   }
-  if ( abs_ackno <= ackno_ ) {
+  if ( abs_ackno <= abs_ackno_ ) {
     return;
   }
   if ( abs_ackno > 0 && !SYN_ACKED_ ) {
@@ -119,17 +130,20 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     FIN_ACKED_ = true;
   }
   window_size_ = msg.window_size;
-  ackno_ = abs_ackno;
+
+  abs_ackno_ = abs_ackno;
 
   timer_.resetRTO();
   consecutive_retransmission_ = 0;
 
   /* update the outstanding queue*/
   while ( !segment_outstanding_.empty() ) {
+
     const auto& sender_msg = segment_outstanding_.front();
-    if ( ( ackno_ - sender_msg.seqno.unwrap( isn_, ackno_ ) ) >= sender_msg.sequence_length() ) {
-      sequence_numbers_in_flight_ -= sender_msg.sequence_length();
+
+    if ( ( abs_ackno_ - sender_msg.seqno.unwrap( isn_, abs_ackno_ ) ) >= sender_msg.sequence_length() ) {
       segment_outstanding_.pop();
+
     } else {
       break;
     }
@@ -161,18 +175,3 @@ void TCPSender::tick( uint64_t ms_since_last_tick )
     timer_.close();
   }
 }
-
-/* Helper Function (Private)*/
-void TCPSender::send_none_empty_message( TCPSenderMessage& msg )
-{
-  msg.seqno = Wrap32::wrap( next_sequno_, isn_ );
-  next_sequno_ += msg.sequence_length();
-  sequence_numbers_in_flight_ += msg.sequence_length();
-
-  segment_buffer_.push_back( msg );
-  segment_outstanding_.push( msg );
-
-  if ( !timer_.isOpen() ) {
-    timer_.start();
-  }
-};

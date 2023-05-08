@@ -77,19 +77,19 @@ private:
   /* Absolute sequece number*/
   uint64_t next_sequno_ { 0 };
   uint64_t window_size_ { 0 };
-  uint64_t ackno_ { 0 };
-  uint64_t sequence_numbers_in_flight_ { 0 };
+  uint64_t abs_ackno_ { 0 };
+  bool zero_window_ { false };
 
   /* RTO states */
   TCPTimer timer_;
   size_t consecutive_retransmission_ { 0 };
   std::queue<TCPSenderMessage> segment_outstanding_ {}; /*TCPSender may resend*/
-  bool zero_window_ { false };
+  // bool zero_window_ { false };
 
   /*Helper Function*/
   uint64_t next_seqno_absolute() const { return next_sequno_; };
   Wrap32 next_seqno() const { return Wrap32::wrap( next_sequno_, isn_ ); };
-  void send_none_empty_message( TCPSenderMessage& msg );
+  // void send_none_empty_message( TCPSenderMessage& msg );
 
 public:
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */
