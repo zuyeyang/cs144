@@ -87,9 +87,6 @@ TCPSenderMessage TCPSender::send_empty_message() const
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
 {
-  if ( !msg.ackno.has_value() || !SYN_SENT_ ) {
-    return;
-  }
   /* treat window as 1 but do not back off RTO*/
   if ( msg.window_size == 0 ) {
     window_size_ = 1;
@@ -97,6 +94,9 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   } else {
     window_size_ = msg.window_size;
     zero_window_ = false;
+  }
+  if ( !SYN_SENT_ || !msg.ackno.has_value() ) {
+    return;
   }
   uint64_t abs_ackno = msg.ackno.value().unwrap( isn_, abs_ackno_ );
   if ( abs_ackno > abs_ackno_ && abs_ackno <= next_sequno_ ) {
@@ -129,49 +129,6 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   } else {
     timer_.start();
   }
-
-  // Your code here.
-  // if ( !msg.ackno.has_value() || !SYN_SENT_ ) {
-  //   return;
-  // }
-  // uint64_t abs_ackno = msg.ackno.value().unwrap( isn_, next_sequno_ );
-  // if ( abs_ackno - next_sequno_ > 0 ) {
-  //   return;
-  // }
-  // if ( abs_ackno <= abs_ackno_ ) {
-  //   return;
-  // }
-  // if ( abs_ackno > 0 && !SYN_ACKED_ ) {
-  //   SYN_ACKED_ = true;
-  // }
-
-  // if ( abs_ackno == next_sequno_ && FIN_SENT_ ) {
-  //   FIN_ACKED_ = true;
-  // }
-  // window_size_ = msg.window_size;
-
-  // abs_ackno_ = abs_ackno;
-
-  // timer_.resetRTO();
-  // consecutive_retransmission_ = 0;
-
-  // /* update the outstanding queue*/
-  // while ( !segment_outstanding_.empty() ) {
-
-  //   const auto& sender_msg = segment_outstanding_.front();
-
-  //   if ( ( abs_ackno_ - sender_msg.seqno.unwrap( isn_, abs_ackno_ ) ) >= sender_msg.sequence_length() ) {
-  //     segment_outstanding_.pop();
-
-  //   } else {
-  //     break;
-  //   }
-  // }
-  // if ( segment_outstanding_.empty() ) {
-  //   timer_.close();
-  // } else {
-  //   timer_.start();
-  // }
 }
 
 void TCPSender::tick( uint64_t ms_since_last_tick )
