@@ -139,7 +139,7 @@ void TCPSender::tick( uint64_t ms_since_last_tick )
 
   if ( !segment_outstanding_.empty() ) {
     segment_buffer_.push_front( segment_outstanding_.front() );
-    if ( window_size_ > 0 || ( window_size_ == 0 && !SYN_ACKED_ ) ) {
+    if ( !zero_window_ ) {
       consecutive_retransmission_++;
       timer_.doubleRTO();
     }
