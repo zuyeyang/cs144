@@ -84,7 +84,6 @@ private:
   TCPTimer timer_;
   size_t consecutive_retransmission_ { 0 };
   std::queue<TCPSenderMessage> segment_outstanding_ {}; /*TCPSender may resend*/
-  // bool zero_window_ { false };
 
   /*Helper Function*/
   uint64_t next_seqno_absolute() const { return next_sequno_; };
