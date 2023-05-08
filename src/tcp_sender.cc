@@ -19,19 +19,16 @@ TCPSender::TCPSender( uint64_t initial_RTO_ms, optional<Wrap32> fixed_isn )
 
 uint64_t TCPSender::sequence_numbers_in_flight() const
 {
-  // Your code here.
   return next_sequno_ - abs_ackno_;
 }
 
 uint64_t TCPSender::consecutive_retransmissions() const
 {
-  // Your code here.
   return this->consecutive_retransmission_;
 }
 
 optional<TCPSenderMessage> TCPSender::maybe_send()
 {
-  // Your code here.
   if ( !segment_buffer_.empty() ) {
     const TCPSenderMessage res = segment_buffer_.front();
     segment_buffer_.pop_front();
@@ -41,7 +38,6 @@ optional<TCPSenderMessage> TCPSender::maybe_send()
 }
 void TCPSender::push( Reader& outbound_stream )
 {
-  // Your code here.
   if ( outbound_stream.has_error() || FIN_SENT_ ) {
     return;
   }
@@ -79,7 +75,6 @@ void TCPSender::push( Reader& outbound_stream )
 
 TCPSenderMessage TCPSender::send_empty_message() const
 {
-  // Your code here.
   TCPSenderMessage msg;
   msg.seqno = Wrap32::wrap( next_sequno_, isn_ );
   return msg;
@@ -87,7 +82,6 @@ TCPSenderMessage TCPSender::send_empty_message() const
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
 {
-  /* treat window as 1 but do not back off RTO*/
   if ( msg.window_size == 0 ) {
     window_size_ = 1;
     zero_window_ = true;
@@ -147,7 +141,6 @@ void TCPSender::tick( uint64_t ms_since_last_tick )
       timer_.start();
     }
   } else {
-    /* empty segment outstanding */
     timer_.close();
   }
 }
