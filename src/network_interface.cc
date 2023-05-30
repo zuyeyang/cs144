@@ -41,7 +41,7 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
     buffer_.push( res );
   } else {
     /* send a ARP request*/
-    if ( pending_ip_address_table_.find( next_hop_ip_addr ) != pending_ip_address_table_.end() ) {
+    if ( pending_ip_address_table_.find( next_hop_ip_addr ) == pending_ip_address_table_.end() ) {
       ARPMessage msg;
       msg.opcode = ARPMessage::OPCODE_REQUEST;
       msg.sender_ethernet_address = ethernet_address_;
