@@ -1,16 +1,18 @@
 #pragma once
 
 #include "address.hh"
+#include "arp_message.hh"
 #include "ethernet_frame.hh"
+#include "ethernet_header.hh"
 #include "ipv4_datagram.hh"
 
 #include <iostream>
 #include <list>
+#include <map>
 #include <optional>
 #include <queue>
 #include <unordered_map>
 #include <utility>
-
 // A "network interface" that connects IP (the internet layer, or network layer)
 // with Ethernet (the network access layer, or link layer).
 
@@ -40,6 +42,22 @@ private:
 
   // IP (known as Internet-layer or network-layer) address of the interface
   Address ip_address_;
+
+  /* Helper class and attributes */
+  struct ARP_entry
+  {
+    EthernetAddress ethernet_address_;
+    size_t TTL; /* total time living*/
+  };
+  std::map<uint32_t, ARP_entry> arp_table_ {};
+  const size_t lifespan_arp_entry_ = 30000;
+  std::map<uint32_t, size_t> pending_ip_address_table_ {};
+  const size_t lifespan_pending_ip_address_ = 5000;
+  std::list<std::pair<Address, InternetDatagram>> pending_ID_pair_table_ {};
+  std::queue<EthernetFrame> buffer_ {};
+
+  /* Helper function*/
+  void extract_info_from_ARPMessage( ARPMessage& msg );
 
 public:
   // Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer)

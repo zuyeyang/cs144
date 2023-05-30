@@ -1,15 +1,15 @@
 Checkpoint 4 Writeup
 ====================
 
-My name: [your name here]
+My name: Benson Zu
 
-My SUNet ID: [your sunetid here]
+My SUNet ID: zuyeyang
 
 I collaborated with: [list sunetids here]
 
 I would like to thank/reward these classmates for their help: [list sunetids here]
 
-This checkpoint took me about [n] hours to do. I [did/did not] attend the lab session.
+This checkpoint took me about [4] hours to do. I did not attend the lab session.
 
 Program Structure and Design of the NetworkInterface:
 []
