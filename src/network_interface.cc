@@ -42,19 +42,18 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
   } else {
     /* send a ARP request*/
     if ( pending_ip_address_table_.find( next_hop_ip_addr ) == pending_ip_address_table_.end() ) {
-      ARPMessage msg;
-      msg.opcode = ARPMessage::OPCODE_REQUEST;
-      msg.sender_ethernet_address = ethernet_address_;
-      msg.sender_ip_address = ip_address_.ipv4_numeric();
-      msg.target_ethernet_address = {};
-      msg.target_ip_address = next_hop_ip_addr;
+      ARPMessage req;
+      req.opcode = ARPMessage::OPCODE_REQUEST;
+      req.sender_ethernet_address = ethernet_address_;
+      req.sender_ip_address = ip_address_.ipv4_numeric();
+      req.target_ip_address = next_hop_ip_addr;
 
       res.header = {
         .dst = ETHERNET_BROADCAST,
         .src = ethernet_address_,
         .type = EthernetHeader::TYPE_ARP,
       };
-      res.payload = serialize( msg );
+      res.payload = serialize( req );
       buffer_.push( res );
       pending_ip_address_table_[next_hop_ip_addr] = lifespan_pending_ip_address_;
     }
@@ -132,21 +131,20 @@ void NetworkInterface::tick( const size_t ms_since_last_tick )
       j->second -= ms_since_last_tick;
       j++;
     } else {
-      /* resend a msg*/
-      ARPMessage msg;
+      /* resend a request*/
+      ARPMessage req;
       EthernetFrame res;
-      msg.opcode = ARPMessage::OPCODE_REQUEST;
-      msg.sender_ethernet_address = ethernet_address_;
-      msg.sender_ip_address = ip_address_.ipv4_numeric();
-      msg.target_ethernet_address = {};
-      msg.target_ip_address = j->first;
+      req.opcode = ARPMessage::OPCODE_REQUEST;
+      req.sender_ethernet_address = ethernet_address_;
+      req.sender_ip_address = ip_address_.ipv4_numeric();
+      req.target_ip_address = j->first;
 
       res.header = {
         .dst = ETHERNET_BROADCAST,
         .src = ethernet_address_,
         .type = EthernetHeader::TYPE_ARP,
       };
-      res.payload = serialize( msg );
+      res.payload = serialize( req );
       buffer_.push( res );
       j->second = lifespan_pending_ip_address_;
     }
