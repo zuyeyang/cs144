@@ -13,6 +13,7 @@ This checkpoint took me about [4] hours to do. I did not attend the lab session.
 
 Program Structure and Design of the NetworkInterface:
 [
+## Private Attributes
 1. ARP_entry struct and arp_table_: 
 The ARP table is a mapping of IP addresses to ARP entries. Each ARP entry 
 contains an Ethernet address and a Time To Live value. This table is used
@@ -28,6 +29,21 @@ sent once the Ethernet address is resolved.
 This is a queue of Ethernet frames that are ready to be transmitted. All
 request will be pushed to this buffer_, and every call of maybe_send()
 will extract a single EthernetFrame out.
+
+## Public Methods:
+1. send_datagram(): 
+First checks the ARP table to see if the Ethernet address for the next
+hop is known. If it is, the datagram is encapsulated in an Ethernet frame
+and added to the buffer for transmission. If the address is not known,
+an ARP request is sent.
+2. recv_frame(): 
+Depending on the type of frame (IPv4 or ARP), it either returns the
+contained datagram or processes the ARP message to update the ARP
+table or send an ARP reply.
+3. tick(): 
+Remove or updates of entries in the ARP table and the pending IP 
+address table depending on whether ms_since_last_tick is greater
+or smaller than the TTL of each element.
 ]
 
 Implementation Challenges:
