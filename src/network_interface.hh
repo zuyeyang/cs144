@@ -50,9 +50,7 @@ private:
     size_t TTL; /* total time living*/
   };
   std::map<uint32_t, ARP_entry> arp_table_ {};
-  const size_t lifespan_arp_entry_ = 30000;
   std::map<uint32_t, size_t> pending_ip_address_table_ {};
-  const size_t lifespan_pending_ip_address_ = 5000;
   std::list<std::pair<Address, InternetDatagram>> pending_ID_pair_table_ {};
   std::queue<EthernetFrame> buffer_ {};
 

@@ -21,8 +21,12 @@ NetworkInterface::NetworkInterface( const EthernetAddress& ethernet_address, con
 // next_hop: the IP address of the interface to send it to (typically a router or default gateway, but
 // may also be another host if directly connected to the same network as the destination)
 
+const size_t lifespan_arp_entry_ = 30000;
+const size_t lifespan_pending_ip_address_ = 5000;
+
 // Note: the Address type can be converted to a uint32_t (raw 32-bit IP address) by using the
 // Address::ipv4_numeric() method.
+
 void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )
 {
   EthernetFrame res;
