@@ -29,29 +29,36 @@ void Router::route()
   // Go through all the interfaces, and route every incoming datagram
   // to the best outgoing interface.
   for ( auto& interface : interfaces_ ) {
-    while ( auto datagram = interface.maybe_receive() ) {
-      route_one_datagram( datagram.value() );
+    while ( true ) {
+      auto datagram = interface.maybe_receive();
+      if ( datagram.has_value() ) {
+        route_one_datagram( datagram.value() );
+      } else {
+        break;
+      }
     }
   }
 }
 
 void Router::route_one_datagram( InternetDatagram& dgram )
 {
+
   auto target_entry = router_table_.end();
-  uint8_t maxsize = -1;
   for ( auto i = router_table_.begin(); i != router_table_.end(); i++ ) {
     bool isDefault = i->prefix_length == 0;
-    bool isMatch = ( i->route_prefix ^ dgram.header.dst ) >> ( 32 - i->prefix_length ) == 0;
-    if ( isDefault || isMatch ) {
+    if ( isDefault || ( i->route_prefix ^ dgram.header.dst ) >> ( 32 - i->prefix_length ) == 0 ) {
       /* select the best option*/
-      if ( i->prefix_length > maxsize ) {
+      if ( target_entry == router_table_.end() || i->prefix_length > target_entry->prefix_length ) {
         target_entry = i;
-        maxsize = i->prefix_length;
       }
     }
   }
-  if ( target_entry != router_table_.end() && dgram.header.ttl > 1 ) {
+  if ( target_entry != router_table_.end() ) {
+    if ( dgram.header.ttl <= 1 ) {
+      return; // drop
+    }
     dgram.header.ttl--;
+    dgram.header.compute_checksum();
     const optional<Address> next_hop = target_entry->next_hop;
     AsyncNetworkInterface& interface = interfaces_[target_entry->interface_num];
     if ( next_hop.has_value() ) {
