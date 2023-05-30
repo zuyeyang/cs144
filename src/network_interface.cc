@@ -84,9 +84,9 @@ optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& fr
     if ( !parse( msg, frame.payload ) ) {
       return nullopt;
     }
-    bool isRequest
+    const bool isRequest
       = msg.opcode == ARPMessage::OPCODE_REQUEST && msg.target_ip_address == ip_address_.ipv4_numeric();
-    bool isReply = msg.opcode == ARPMessage::OPCODE_REPLY && msg.target_ethernet_address == ethernet_address_;
+    const bool isReply = msg.opcode == ARPMessage::OPCODE_REPLY && msg.target_ethernet_address == ethernet_address_;
     if ( isRequest ) {
       ARPMessage reply;
       reply.opcode = ARPMessage::OPCODE_REPLY;
